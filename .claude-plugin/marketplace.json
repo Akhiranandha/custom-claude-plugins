@@ -1,0 +1,7 @@
+{
+  "name": "sdd-marketplace",
+  "owner": { "name": "kakhiranandha" },
+  "plugins": [
+    { "name": "sdd", "source": "./" }
+  ]
+}

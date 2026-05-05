@@ -1,0 +1,26 @@
+# Local scratch / notes
+temp.txt
+temp2.txt
+*.tmp
+*.log
+
+# Local Claude Code settings (per-user)
+.claude/settings.local.json
+
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+
+# Node (in case of future tooling)
+node_modules/
+npm-debug.log*
+
+# Env / secrets
+.env
+.env.*
