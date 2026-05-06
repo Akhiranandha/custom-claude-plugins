@@ -89,9 +89,4 @@ Install these once before using `/sdd:ship` (the only phase that talks to the ou
 - **Git is required for safety rails.** `/sdd:build` offers `git init` if missing; without git there's no stash, branch, or rollback.
 - **No-remote handling.** `/sdd:ship` detects missing remote and offers commit-only / configure-then-proceed / cancel.
 
-## Installing locally
 
-```
-/plugin install "C:\Users\Kodam\OneDrive\Desktop\Ai-Native\My-plugin"
-/reload-plugins
-```
