@@ -1,11 +1,11 @@
 ---
 name: spec
-description: Phase 1 of the SDD cycle. Use when the user invokes /spec-flow:spec <feature> to interactively author a feature spec at docs/specs/<feature>/spec.md (amendments to an existing spec go through /spec-flow:update instead). Produces the SDD 6-section template (Goal, Requirements, User Stories with US-N IDs and optional Done-when checks, Technical details, Out of scope, Edge cases). Sub-capabilities of one feature go in one spec as separate US-IDs — never multiple specs. Pauses at a checkpoint so the user can review before implementation.
+description: Phase 1 of the SDD cycle. Use when the user invokes /spec-lean:spec <feature> to interactively author a feature spec at docs/specs/<feature>/spec.md (amendments to an existing spec go through /spec-lean:update instead). Produces the SDD 6-section template (Goal, Requirements, User Stories with US-N IDs and optional Done-when checks, Technical details, Out of scope, Edge cases). Sub-capabilities of one feature go in one spec as separate US-IDs — never multiple specs. Pauses at a checkpoint so the user can review before implementation.
 argument-hint: <feature-name>
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion
 ---
 
-# /spec-flow:spec — Phase 1: Write the Spec
+# /spec-lean:spec — Phase 1: Write the Spec
 
 You are running Phase 1 of the SDD cycle for feature **$1**. Output: `docs/specs/$1/spec.md`.
 
@@ -13,7 +13,7 @@ You are running Phase 1 of the SDD cycle for feature **$1**. Output: `docs/specs
 
 If `docs/specs/$1/spec.md` already exists, ask the user via AskUserQuestion:
 
-> A spec for `$1` already exists. Choose: **(a)** overwrite, **(b)** update via `/spec-flow:update $1`, **(c)** cancel.
+> A spec for `$1` already exists. Choose: **(a)** overwrite, **(b)** update via `/spec-lean:update $1`, **(c)** cancel.
 
 Stop unless they choose (a).
 
@@ -70,7 +70,7 @@ Capability statements using must / should / can. Plain language. High-level — 
 
 ## 3. User Stories
 
-Each story has a stable `US-N` ID. `Done when:` blocks are optional but recommended — they are how `/spec-flow:validate` confirms the story works. Mix automated (commands, scripts, API calls) and manual (UI checks).
+Each story has a stable `US-N` ID. `Done when:` blocks are optional but recommended — they are how `/spec-lean:validate` confirms the story works. Mix automated (commands, scripts, API calls) and manual (UI checks).
 
 For error / rejection / failure stories, **name the discriminating signal** in the relevant Done-when check — a specific stderr substring, exception class, HTTP status, error code. Vague signals make validation unreliable.
 
@@ -82,7 +82,7 @@ For error / rejection / failure stories, **name the discriminating signal** in t
   - Done when:
     - _(automated)_ `<command>` — exits 2, stderr contains "amount must be positive"
 - **US-3**: As a [role], I want to [action], so that [benefit].
-  _(no Done-when block — `/spec-flow:validate` will ask the user to manually confirm)_
+  _(no Done-when block — `/spec-lean:validate` will ask the user to manually confirm)_
 
 One story per distinct user goal. Group related stories adjacently.
 
@@ -94,7 +94,7 @@ Fill in only what applies. Don't invent details that the user didn't state and C
 - **Entry point / module** — where this code lives
 - **Data model** — tables, schemas, file format
 - **API surface** — endpoints / methods / request-response (only if the feature has an API)
-- **Storage** — name the runtime data file or DB if the feature persists state (so /spec-flow:build can add it to .gitignore)
+- **Storage** — name the runtime data file or DB if the feature persists state (so /spec-lean:build can add it to .gitignore)
 - **Integrations** — external services, queues, third-party APIs
 
 ## 5. Out of scope
@@ -119,7 +119,7 @@ Print one short confirmation listing:
 Then output the checkpoint message exactly:
 
 > Spec written to `docs/specs/$1/spec.md`. Review it and tell me any changes you want.
-> When you're happy, run `/spec-flow:build $1` to implement.
+> When you're happy, run `/spec-lean:build $1` to implement.
 
 DO NOT proceed to implementation in this skill — the user must explicitly trigger the next phase.
 
@@ -129,5 +129,5 @@ DO NOT proceed to implementation in this skill — the user must explicitly trig
 - **Never reuse a `US-N` ID** that already exists in the file (in update mode, append new IDs — don't renumber).
 - **Never guess at stack or conventions** — ask in Step 2.
 - **Keep it tight** — under 200 lines if possible. No padding, no repetition.
-- **For error-path stories, name the discriminating signal in the Done-when check.** Vague signals ("an error is shown") make `/spec-flow:validate` unreliable.
+- **For error-path stories, name the discriminating signal in the Done-when check.** Vague signals ("an error is shown") make `/spec-lean:validate` unreliable.
 - **Sub-capabilities of one feature = one spec, multiple US-IDs.** Don't split.
