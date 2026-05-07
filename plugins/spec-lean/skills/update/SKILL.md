@@ -1,11 +1,11 @@
 ---
 name: update
-description: Iteration handler for the SDD cycle. Use when the user invokes /spec-flow:update <feature> to amend an existing spec mid-cycle. Snapshots the current spec to spec.md.prev, lets the user revise interactively, diffs the two versions to identify changed US-N IDs, and marks affected stories as in-progress in spec-status.md so the next /spec-flow:build only redoes what changed.
+description: Iteration handler for the SDD cycle. Use when the user invokes /spec-lean:update <feature> to amend an existing spec mid-cycle. Snapshots the current spec to spec.md.prev, lets the user revise interactively, diffs the two versions to identify changed US-N IDs, and marks affected stories as in-progress in spec-status.md so the next /spec-lean:build only redoes what changed.
 argument-hint: <feature-name>
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion
 ---
 
-# /spec-flow:update — Iterate on an Existing Spec
+# /spec-lean:update — Iterate on an Existing Spec
 
 You are running the iteration handler for feature **$1**. This skill exists because real SDD is iterative: implementation reveals spec gaps, requirements shift, and we need a back-edge that does NOT nuke already-`done` stories.
 
@@ -13,7 +13,7 @@ You are running the iteration handler for feature **$1**. This skill exists beca
 
 ### 1. Pre-check
 
-`docs/specs/$1/spec.md` must exist. If not, stop and tell the user to run `/spec-flow:spec $1`.
+`docs/specs/$1/spec.md` must exist. If not, stop and tell the user to run `/spec-lean:spec $1`.
 
 ### 2. Snapshot the current spec
 
@@ -48,4 +48,4 @@ Leave unchanged stories alone — `done` stories that didn't change stay `done`.
 Output:
 
 > Spec updated. Affected stories: **added [list], modified [list], removed [list]**.
-> Run `/spec-flow:build $1` to rebuild only the affected pieces.
+> Run `/spec-lean:build $1` to rebuild only the affected pieces.

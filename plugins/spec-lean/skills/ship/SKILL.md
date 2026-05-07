@@ -1,17 +1,17 @@
 ---
 name: ship
-description: Phase 4 of the SDD cycle. Use when the user invokes /spec-flow:ship <feature> to review, commit, push, PR, and merge. Performs an SDD-aware pre-commit code review of the local diff (BLOCK/CAUTION/GO verdict) — checking story deviations against US-N IDs in spec-status.md, runtime-artifact leaks, and the standard security / data-loss / concurrency issues. Only on GO does it dispatch commit-commands:commit (no remote) or commit-commands:commit-push-pr (with remote), then runs the marketplace /code-review on the PR diff as a second pass before asking for explicit merge permission.
+description: Phase 4 of the SDD cycle. Use when the user invokes /spec-lean:ship <feature> to review, commit, push, PR, and merge. Performs an SDD-aware pre-commit code review of the local diff (BLOCK/CAUTION/GO verdict) — checking story deviations against US-N IDs in spec-status.md, runtime-artifact leaks, and the standard security / data-loss / concurrency issues. Only on GO does it dispatch commit-commands:commit (no remote) or commit-commands:commit-push-pr (with remote), then runs the marketplace /code-review on the PR diff as a second pass before asking for explicit merge permission.
 argument-hint: <feature-name>
 allowed-tools: Read, Write, Edit, Glob, Grep, Skill, Bash, AskUserQuestion
 ---
 
-# /spec-flow:ship — Phase 4: Review, Commit, PR, Merge
+# /spec-lean:ship — Phase 4: Review, Commit, PR, Merge
 
 You are running Phase 4 of the SDD cycle for feature **$1**. Inputs: pending changes + `docs/specs/$1/spec.md` + `docs/specs/$1/spec-status.md`.
 
 ## Pre-checks
 
-1. **Validation passed?** Read `docs/specs/$1/spec-status.md`. Every `US-N` should have status `done`. If anything is `in-progress` / `blocked` / `not-started`, stop and tell the user to run `/spec-flow:validate $1` first.
+1. **Validation passed?** Read `docs/specs/$1/spec-status.md`. Every `US-N` should have status `done`. If anything is `in-progress` / `blocked` / `not-started`, stop and tell the user to run `/spec-lean:validate $1` first.
 
 2. **Git initialized and there are pending changes?** If no pending changes, stop with: _"Nothing to ship — no pending changes."_
 
@@ -139,7 +139,7 @@ If the diff has any critical or high issues, **omit the low-severity section ent
 
 ### 1h. Verdict handling
 
-- **BLOCK** → output the issues. Do NOT commit. Tell the user to fix and re-run `/spec-flow:ship $1`. Stop.
+- **BLOCK** → output the issues. Do NOT commit. Tell the user to fix and re-run `/spec-lean:ship $1`. Stop.
 - **CAUTION** → show issues, then use AskUserQuestion: _"Proceed despite cautions? (y/n)"_. Stop on `n`.
 - **GO** → continue to Step 2.
 

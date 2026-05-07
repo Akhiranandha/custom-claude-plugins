@@ -1,11 +1,11 @@
 ---
 name: validate
-description: Phase 3 of the SDD cycle. Use when the user invokes /spec-flow:validate <feature> to walk through each User Story's Done-when checks after implementation. Categorizes checks as automated (executes them) or manual (presents as a checklist), falls back to a manual y/n confirmation for stories with no Done-when block, aggregates done/blocked per story, and either unblocks the ship phase or loops back to build with failure notes appended to spec-status.md.
+description: Phase 3 of the SDD cycle. Use when the user invokes /spec-lean:validate <feature> to walk through each User Story's Done-when checks after implementation. Categorizes checks as automated (executes them) or manual (presents as a checklist), falls back to a manual y/n confirmation for stories with no Done-when block, aggregates done/blocked per story, and either unblocks the ship phase or loops back to build with failure notes appended to spec-status.md.
 argument-hint: <feature-name>
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion
 ---
 
-# /spec-flow:validate — Phase 3: Validate Against the Spec
+# /spec-lean:validate — Phase 3: Validate Against the Spec
 
 You are running Phase 3 of the SDD cycle for feature **$1**.
 
@@ -15,7 +15,7 @@ This phase is the **only** correctness gate. Code compiling and self-review pass
 
 1. **Read the spec.** Open `docs/specs/$1/spec.md`. Extract every story from Section 3 — both the narrative line and any `Done when:` sub-block beneath it. If Section 3 is empty or missing, stop and tell the user:
 
-   > The spec has no User Stories. Add some to `docs/specs/$1/spec.md` (each with a `US-N` ID), then re-run `/spec-flow:validate $1`.
+   > The spec has no User Stories. Add some to `docs/specs/$1/spec.md` (each with a `US-N` ID), then re-run `/spec-lean:validate $1`.
 
 2. **Parse each story's `US-N` ID.** Every story in the spec must carry a stable ID (e.g. `US-1`, `US-2`). If any story lacks an ID, stop and ask the user to add IDs first — failure logs reference these IDs, and renumbering on the fly makes failure history unreadable.
 
@@ -52,9 +52,9 @@ This phase is the **only** correctness gate. Code compiling and self-review pass
    - **All stories `done`** → update each story's row in `docs/specs/$1/spec-status.md` to `done`, then output:
 
      > Validation complete — all stories pass.
-     > Run `/spec-flow:ship $1` to review, commit, and ship.
+     > Run `/spec-lean:ship $1` to review, commit, and ship.
 
    - **Any `blocked`** → append a `## Validation failures (YYYY-MM-DD)` section to `docs/specs/$1/spec-status.md` listing each blocked `US-N`, the failing check (or "manual: n"), and the observed behaviour. Update the row's status to `blocked`. Then output:
 
      > Validation failed: [list of US-IDs]. Details appended to `docs/specs/$1/spec-status.md`.
-     > Fix and re-run `/spec-flow:build $1`. If requirements changed, run `/spec-flow:update $1` first.
+     > Fix and re-run `/spec-lean:build $1`. If requirements changed, run `/spec-lean:update $1` first.
