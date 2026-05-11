@@ -326,4 +326,34 @@ docs/codebase-map.md seeded:
   TODO role descriptions: <K> (fill in before /sdd:spec / /sdd:build)
 ```
 
-<!-- Slices 7-10 append below this point -->
+## Case B — Existing codebase, no specs yet
+
+**Triggered when:** source manifests detected AND no `docs/specs/*.md` flat files AND no `docs/specs/*/spec.md` subdirectories.
+
+### B.1 — Profile detection + CLAUDE.md seeding
+
+Run the **Shared step — Profile detection + CLAUDE.md seeding** above (Steps S.1, S.2, S.3). After this completes, CLAUDE.md has `## Test commands` + `## Test layout` for every service.
+
+### B.2 — Codebase-map seeding
+
+Run the **Shared step — Codebase-map seeding** above (Steps M.1 through M.6). After this completes, `docs/codebase-map.md` is scaffolded.
+
+### B.3 — Print next-step pointer
+
+```
+/sdd:init complete — project `<name>` ready for SDD.
+
+What's set up:
+  - CLAUDE.md ## Test commands ↓ <command(s)>
+  - CLAUDE.md ## Test layout ↓ <profile(s)>
+  - docs/codebase-map.md seeded with <N> files
+    → fill in <!-- TODO --> role descriptions before /sdd:spec
+
+Existing source is untouched.
+
+Next: /sdd:spec <feature> — write your first feature spec against the existing baseline
+```
+
+Stop.
+
+<!-- Slices 8-10 append below this point -->
