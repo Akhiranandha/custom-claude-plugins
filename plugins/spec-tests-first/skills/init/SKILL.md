@@ -70,4 +70,89 @@ Continue?
 
 AskUserQuestion. On (a): proceed to Step 2 (case-specific path). On (b): stop.
 
-<!-- Slices 3-10 append below this point -->
+## Case A — Fresh repo, fresh project
+
+**Triggered when:** no source manifests detected AND no `docs/specs/` directory or it's empty.
+
+### A.1 — Confirm intent
+
+AskUserQuestion:
+
+> Detected an empty project — no source code, no existing specs.
+> Is this the intended state for `<name>`?
+> - (a, recommended) Yes — set up CLAUDE.md + empty codebase-map.md and exit cleanly
+> - (b) No — let me cancel and check what's missing
+
+### A.2 — Git pre-checks
+
+Same shape as `/sdd:build`'s pre-checks 2 and 3:
+
+- If not a git repo, offer `git init` (recommended), proceed without git, or cancel.
+- If no `.gitignore` at the project root, scaffold a minimal language-agnostic one:
+
+```
+# Local scratch
+*.log
+*.tmp
+.env
+.env.*
+
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Claude Code session artifacts
+chat-session/
+```
+
+### A.3 — Resolve initial profile (optional)
+
+AskUserQuestion:
+
+> Want to pick a test framework + layout profile now, or leave that for the first `/sdd:spec` to detect?
+> - (a) Pick now — I'll save it to CLAUDE.md
+> - (b, recommended) Leave for later — /sdd:spec will detect on first invocation
+
+On (a): present the 12 built-in profiles + `custom`. Save to `CLAUDE.md ## Test commands` + `## Test layout` using the single-service or multi-service shape from `/sdd:build`'s Step 2/3.
+
+On (b): skip — `/sdd:spec` will handle this when invoked.
+
+### A.4 — Scaffold empty codebase-map.md
+
+Write `docs/codebase-map.md` (only if it doesn't exist):
+
+```markdown
+# codebase-map
+
+Project-wide map of source files and their roles. Updated by `/sdd:build` after each spec.
+
+| File | Role |
+|------|------|
+
+## Key invariants
+
+<!-- TODO: add invariants as the project takes shape -->
+```
+
+### A.5 — Print next-step pointer
+
+```
+/sdd:init complete — project `<name>` ready for SDD.
+
+What's set up:
+  - .gitignore scaffolded (if missing)
+  - CLAUDE.md ## Test commands + ## Test layout (if you picked A.3 option (a))
+  - docs/codebase-map.md (empty, ready for first build)
+
+Next: /sdd:spec <feature> — write your first feature spec
+```
+
+Stop. Skip downstream sections.
+
+<!-- Slices 4-10 append below this point -->
