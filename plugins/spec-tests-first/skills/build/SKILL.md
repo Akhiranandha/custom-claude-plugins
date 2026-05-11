@@ -276,7 +276,9 @@ Open or create `docs/specs/$1/spec-status.md`:
 
   The `Latest review:` line is initialized to `(none yet)` — `/sdd:review` updates it.
 
-- **If it exists** (e.g. `/sdd:update` cycle or a partial prior build), set Phase 2 = `in-progress` (mutate the row's Status + Updated columns via Edit; don't rewrite the file). Set every `stale` and `not-started` AC-ID to `in-progress` in the per-AC table. Leave `pass` ACs alone. Keep Phase 3+ rows as `pending`. Keep the existing `Latest review:` line.
+- **If it exists** (e.g. `/sdd:update` cycle or a partial prior build):
+  - **If the `## Phase progress` table is absent** (older v1 file, pre-v2.1): insert the full 6-row table between `Last updated:` and the per-AC `## Status per Acceptance Criterion` section. Set Phase 1 = `done`, Updated = today, Notes = `"backfilled by /sdd:build during v1→v2 migration"`. Set Phase 2 = `in-progress`, Updated = today, Notes = `"per-AC RGR started"`. Phases 3–6 = `pending`. Then proceed to the AC table.
+  - **If the `## Phase progress` table is present**, set Phase 2 = `in-progress` (mutate the row's Status + Updated columns via Edit; don't rewrite the file). Set every `stale` and `not-started` AC-ID to `in-progress` in the per-AC table. Leave `pass` ACs alone. Keep Phase 3+ rows as `pending`. Keep the existing `Latest review:` line.
 
 **Phase 2 status update at the START of Step 6** (after this scaffold step, before the first AC iterates): mark Phase 2 = `in-progress` (already done above). On end-of-build success → mark Phase 2 = `done` with note `"<N> ACs pass"`. On cap-hit or hard failure → mark Phase 2 = `fail` or `blocked` with a one-line reason. See Step 7a for the end-of-build status update.
 
