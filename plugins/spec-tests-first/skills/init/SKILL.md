@@ -155,4 +155,75 @@ Next: /sdd:spec <feature> — write your first feature spec
 
 Stop. Skip downstream sections.
 
-<!-- Slices 4-10 append below this point -->
+## Shared step — Profile detection + CLAUDE.md seeding (Cases B and C)
+
+This section is invoked by Case B (Step B.1) and Case C (Step C.2). It writes `CLAUDE.md ## Test commands` + `## Test layout` once per init invocation; subsequent calls within the same run reuse the cached resolution.
+
+### S.1 — Multi-service detection
+
+Glob for stack manifests in **subdirectories** (not the repo root):
+
+- `**/package.json` (excluding root, excluding `node_modules`)
+- `**/pom.xml`
+- `**/build.gradle*`
+- `**/Cargo.toml`
+- `**/go.mod`
+- `**/pyproject.toml`
+- `**/setup.py`
+- `**/*.csproj`
+- `**/Gemfile`
+- `**/composer.json`
+
+If TWO OR MORE distinct subdirectories contain manifests → monorepo signal. AskUserQuestion:
+
+> Detected monorepo with services:
+>   - **<name1>** (<stack1>) at `<subdir1>/`
+>   - **<name2>** (<stack2>) at `<subdir2>/`
+>
+> How should /sdd:init configure CLAUDE.md?
+> - (a, recommended) Multi-service — per-service test commands + layout profiles
+> - (b) Single-service — pick one to configure; ignore the others
+> - (c) Cancel
+
+On (a): record the service list, run S.2 + S.3 per service.
+On (b): record the chosen service, run S.2 + S.3 once.
+On (c): stop the entire init invocation.
+
+If only the repo root has a manifest (or 0/1 in subdirectories), single-service — run S.2 + S.3 once.
+
+### S.2 — Test command resolution per service
+
+For each service (or the single service):
+
+Derive a candidate command from the manifest:
+
+- `pyproject.toml` / `setup.py` → `python -m pytest`
+- `package.json` with a `scripts.test` entry → use that script (`npm test`); else detect a jest / vitest binary in `node_modules/.bin/`
+- `Cargo.toml` → `cargo test`
+- `go.mod` → `go test ./...`
+- `pom.xml` → `mvn test`
+- `build.gradle` / `build.gradle.kts` → `./gradlew test`
+- `*.csproj` → `dotnet test`
+- `Gemfile` with `rspec` → `bundle exec rspec`
+- `composer.json` with `phpunit` → `vendor/bin/phpunit`
+
+AskUserQuestion (per service if multi-service):
+
+> Service: **<name>** — detected command: `<cmd>`. Save?
+> - (a, recommended) Yes — save and proceed
+> - (b) Override — type a different command
+> - (c) Skip this service
+
+On (a)/(b): write to `CLAUDE.md ## Test commands`. Use the multi-service or single-service format from `/sdd:build`'s Step 2.
+
+### S.3 — Profile resolution per service
+
+Derive a candidate profile from the resolved command (use the table from `/sdd:build` Step 3 — `pytest → python-pytest`, `jest → js-jest`/`react-jest-rtl`, etc.).
+
+If multiple candidates fit (e.g. `jest` could be plain or React), AskUserQuestion. If no candidate matches, ask for `custom` (4 fields: `tests_root`, `files`, `fixtures`, `feature_anchor`).
+
+Save to `CLAUDE.md ## Test layout` using the same single-service / multi-service shape as `## Test commands`.
+
+After both S.2 and S.3 finish for every service, the CLAUDE.md sections are complete. Subsequent steps (codebase-map seeding, spec migration) read these without re-prompting.
+
+<!-- Slices 5-10 append below this point -->
