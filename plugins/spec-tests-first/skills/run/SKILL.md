@@ -7,9 +7,17 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Skill, Bash, AskUserQuestion
 
 # /sdd:run — Full SDD Cycle Orchestrator (6 phases)
 
+**Announce at start:** Say to the user: "I'm using /sdd:run to chain the 6-phase cycle for `$1` (spec → build → review → fix → validate → ship), pausing for confirmation between every phase." Then proceed.
+
 You are running the full SDD cycle for feature **$1**. This is the orchestrator. You will run each phase, then **pause for explicit user confirmation** before the next. The user can intervene, edit, or stop at any checkpoint.
 
 The v2 cycle is **six phases**: spec → build → review → fix → validate → ship. The dedicated `/sdd:tests` phase from v1 was folded into `/sdd:build`'s per-AC red-green-refactor loop.
+
+## Iron Law
+
+> **Never auto-advance. Every phase ends with an explicit AskUserQuestion checkpoint. The user can intervene, edit, or stop at every transition. Even on a clean cycle, the human is in the loop.**
+
+The whole reason `/sdd:run` exists is to give the user a single command for the cycle while preserving every phase's interrupt point. Auto-advancing destroys that contract.
 
 ## Resumability check (run before Phase 1)
 

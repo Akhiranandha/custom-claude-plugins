@@ -7,9 +7,15 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion
 
 # /sdd:update — Iterate on an Existing Spec
 
+**Announce at start:** Say to the user: "I'm using /sdd:update to amend `$1`'s spec — snapshot to spec.md.prev, edit, diff, mark changed ACs as stale. Tests get rewritten by `/sdd:build`'s RGR loop, scoped to only the stale + new ACs." Then proceed.
+
 You are running the iteration handler for feature **$1**. This skill exists because real SDD is iterative: implementation reveals spec gaps, requirements shift, and we need a back-edge that does NOT nuke passing tests.
 
 In STF v2, `/sdd:update` no longer regenerates tests — that's `/sdd:build`'s job in the per-AC red-green-refactor loop. This skill's role is narrower: snapshot, edit, diff, mark.
+
+## Iron Law
+
+> **Never renumber AC-IDs or VS-IDs. Never modify `pass` ACs. The whole point of `/sdd:update` is that work already done stays done — only the changed/new criteria iterate again.**
 
 ## Steps
 

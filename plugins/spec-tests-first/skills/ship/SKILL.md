@@ -7,7 +7,15 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion
 
 # /sdd:ship — Phase 6: Commit, Push, PR, Merge
 
+**Announce at start:** Say to the user: "I'm using /sdd:ship to commit + push + open a PR + (with your permission) merge, with an SDD-aware commit message and PR body. Critical findings outstanding will block — I'll check first." Then proceed.
+
 You are running Phase 6 of the SDD cycle for feature **$1**. Inputs: feature branch with all of `/sdd:build` + `/sdd:fix` + `/sdd:validate` complete. Outputs: a commit (locally if no remote, otherwise commit + push + PR + optional merge).
+
+## Iron Law
+
+> **Ship blocks on outstanding Critical findings. No exceptions, no auto-bypass — if any Critical finding in the latest review report has `Status: pending` or `Status: deferred`, the user must address them (via `/sdd:fix` or explicit override there with justification) before ship proceeds.**
+
+This is the last gate before code goes anywhere outside the developer's machine. The Critical gate exists because a Critical finding in production code is materially worse than one in a feature branch.
 
 ## Pre-checks
 
@@ -47,6 +55,14 @@ You are running Phase 6 of the SDD cycle for feature **$1**. Inputs: feature bra
    On (a): proceed through Step 1 and Step 2 only, stop after the local commit and report the SHA. Skip Steps 3–5.
    On (b): `git remote add origin <url>`, continue through all five steps.
    On (c): stop.
+
+## Phase 6 status update
+
+Before doing anything else, Edit `docs/specs/$1/spec-status.md`'s Phase 6 row: Status = `in-progress`, Updated = today, Notes = `"shipping"`. This lets `/sdd:status` show the in-flight state if the ship flow pauses for user input.
+
+After a successful merge (or after a local-only commit when there's no remote), update Phase 6 row again: Status = `done`, Notes = `"merged: <PR url>"` (or `"local commit: <short SHA>"` for local-only). If the user leaves the PR open (chose option (e)), set Status = `in-progress`, Notes = `"PR open: <url>"`.
+
+If ship aborts due to a pre-check failure (Critical findings outstanding, no validation, etc.), do NOT modify the Phase 6 row — leave it `pending` so the user knows ship hasn't run yet.
 
 ## Step 1 — Stage and gather SDD-aware metadata
 
@@ -255,6 +271,17 @@ Shipped. Spec `$1` is complete.
   Status: docs/specs/$1/spec-status.md (all pass)
   Review: <report path> (status preserved)
 ```
+
+## Red Flags — STOP and reset
+
+| Thought | Reality |
+|---|---|
+| "I'll skip the Critical-findings pre-check for a small fix" | The pre-check exists for a reason. No exceptions — if the latest review has outstanding Criticals, ship aborts. |
+| "I'll merge without asking — the user already approved everything" | The merge step always asks. User-initiated merge is the contract. |
+| "Conventional-commits don't fit this project, I'll just write a one-liner" | Detect from `git log --oneline -20`. If the project uses free-form, match free-form. But ALWAYS include the SDD-aware body (Spec / ACs / Validation / Review). |
+| "The PR body is verbose — I'll skip the AC checklist" | The AC + VS + Review-summary in the PR body is what makes SDD ships traceable. Don't strip it. |
+| "I'll force-push to clean up history" | Never. Use `--no-ff` if needed; never `--force` on feature branches that have been pushed once. |
+| "Invoke commit-commands for the commit message" | STF v2 is self-contained. Inline the commit. No external plugin invocations. |
 
 ## Rules
 

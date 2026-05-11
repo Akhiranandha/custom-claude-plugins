@@ -45,6 +45,7 @@ For every matched file:
    - `findings_fixed` — count of `Status: fixed`.
    - `critical_outstanding` — count of `Status: pending` + `Status: deferred` with `[Critical]` in the same finding block.
    - If the report file is missing or unreadable, set all three to `?`.
+7. **Current phase** (v2.1 addition): scan for the `## Phase progress` table. The "current phase" is the lowest-numbered row whose Status is NOT `done` AND NOT `pending` (i.e. the active row — `in-progress`, `fail`, or `blocked`). Format as `<N>. <name> (<status>)`. If all rows are `done`, current = `complete`. If all rows are `pending` (build hasn't started), current = `not-started`. If the `## Phase progress` table is absent (older v1 spec-status.md), current = `n/a`.
 
 If a file exists but contains zero matched AC entries, treat it as a valid empty spec (all counts = 0).
 
@@ -53,16 +54,18 @@ If a file exists but contains zero matched AC entries, treat it as a valid empty
 ### Aggregate mode
 
 ```
-| feature | total | pass | fail | blocked | stale | not-started | critical outstanding | last updated |
-|---------|-------|------|------|---------|-------|-------------|----------------------|--------------|
-| <name>  | <T>   | <P>  | <F>  | <B>     | <S>   | <N>         | <C>                  | <YYYY-MM-DD> |
+| feature | current phase           | pass | fail | blocked | stale | critical outstanding | last updated |
+|---------|-------------------------|------|------|---------|-------|----------------------|--------------|
+| <name>  | <N>. <phase> (<status>) | <P>  | <F>  | <B>     | <S>   | <C>                  | <YYYY-MM-DD> |
 ```
 
 - Sort rows alphabetically by feature name.
-- If a spec has zero entries, render its row with all zeros and append ` (empty)` to the feature name.
+- The `current phase` column shows the active phase from the `## Phase progress` table (e.g. `3. review (done)`, `4. fix (in-progress)`, `complete`, `not-started`, or `n/a` for older specs without a Phase progress block). It's the single most useful at-a-glance signal — which feature is waiting on what.
+- `pass` / `fail` / `blocked` / `stale` are AC counts from the per-AC table.
+- If a spec has zero AC entries, append ` (empty)` to the feature name.
 - The `critical outstanding` column shows the count of `Status: pending` + `Status: deferred` Critical findings in the spec's latest review report. `0` is healthy; `n/a` if no review has run yet; `?` if the report file can't be read.
 - After the table, print one summary line:
-  `<K> specs, <T_total> ACs — <P> pass / <F> fail / <B> blocked / <S> stale / <N> not-started. <C_total> critical findings outstanding across all specs.`
+  `<K> specs, <T_total> ACs — <P> pass / <F> fail / <B> blocked / <S> stale. <C_total> critical findings outstanding across all specs.`
 
 ### Drill-down mode
 
@@ -73,9 +76,17 @@ If a file exists but contains zero matched AC entries, treat it as a valid empty
 | AC-2.1   | fail        | flake on retry |
 ```
 
-After the AC table, append a one-line review summary block:
+After the AC table, append a Phase progress block (verbatim mirror of the table from spec-status.md if present; one-line `Phases: n/a` otherwise), then a one-line review summary block:
 
 ```
+Phase progress:
+  1. spec     — done (2026-05-11) — approved by user
+  2. build    — done (2026-05-11) — 4/4 ACs pass
+  3. review   — done (2026-05-11) — 8 findings (0 critical)
+  4. fix      — in-progress (2026-05-11) — 5/8 handled
+  5. validate — pending
+  6. ship     — pending
+
 Latest review: <path or "(none yet)">
 Findings: <fixed>/<total> handled, <critical_outstanding> critical outstanding
 ```

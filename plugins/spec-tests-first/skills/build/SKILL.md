@@ -7,13 +7,27 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion, Agent
 
 # /sdd:build — Phase 2: Per-AC Red-Green-Refactor
 
+**Announce at start:** Say to the user: "I'm using /sdd:build to implement `$1` via per-AC red-green-refactor — one failing test → minimal impl → green verified → next AC, with cap=3 attempts per AC." Then proceed.
+
 You are running Phase 2 of the SDD cycle for feature **$1**. Inputs: `docs/specs/$1/spec.md`. Outputs: working code + tests under the profile's `tests_root` + `docs/specs/$1/spec-status.md` + updated `docs/codebase-map.md` + one feature-level commit at the end.
+
+## Iron Law
+
+> **No production code is written without a failing test first. RED is verified by the test-runner subagent, not by eyeballing — every AC's test is dispatched and confirmed in `failed` before any implementation is touched.**
+
+This is non-negotiable. The whole point of per-AC RGR is that you can't game it — the test-runner JSON either says `failed` or it doesn't. If a test "passes" against zero implementation, the test is too permissive and gets tightened, not skipped.
 
 ## Pre-checks
 
 1. **Spec exists?** `docs/specs/$1/spec.md` must exist. If not, stop:
 
    > No spec found at `docs/specs/$1/spec.md`. Run `/sdd:spec $1` first.
+
+   Additionally, **the spec must be user-approved**: read `docs/specs/$1/spec-status.md` and look for a `## Phase progress` table with row `1. spec` Status = `done`. If `spec-status.md` is missing, or Phase 1 ≠ `done`, stop:
+
+   > Spec for `$1` is not yet approved. Run `/sdd:spec $1` and pick (a) Approve at the end to mark the spec phase done, then re-run `/sdd:build $1`.
+
+   This gate prevents building against a draft spec the user hasn't reviewed. Backward-compat: if `spec-status.md` exists but has no `## Phase progress` block (older v1 file), treat it as approved (the file's existence implies prior approval in v1's workflow) and proceed; Step 5c will insert the Phase progress block.
 
 2. **Git initialized?** Run `git rev-parse --is-inside-work-tree` (silently). If NOT a git repo, AskUserQuestion:
 
@@ -226,7 +240,7 @@ Don't over-scaffold — fixtures grow during Step 6 if real ACs need them.
 
 Do NOT create directories here. Tests will be written next to source files during Step 6. The profile's `tests_root` field is informational. Shared helpers (`testing.ts`, `_testing.go`) are created lazily on the first AC that needs them.
 
-### 5c — Initialize spec-status.md
+### 5c — Initialize / update spec-status.md
 
 Open or create `docs/specs/$1/spec-status.md`:
 
@@ -238,6 +252,17 @@ Open or create `docs/specs/$1/spec-status.md`:
   Last updated: <YYYY-MM-DD>
   Latest review: (none yet)
 
+  ## Phase progress
+
+  | Phase           | Status      | Updated    | Notes                |
+  |-----------------|-------------|------------|----------------------|
+  | 1. spec         | done        | <YYYY-MM-DD> | approved by user   |
+  | 2. build        | in-progress | <YYYY-MM-DD> | per-AC RGR started |
+  | 3. review       | pending     | —          | —                    |
+  | 4. fix          | pending     | —          | —                    |
+  | 5. validate     | pending     | —          | —                    |
+  | 6. ship         | pending     | —          | —                    |
+
   ## Status per Acceptance Criterion
 
   | AC-ID | Status | Notes |
@@ -247,9 +272,13 @@ Open or create `docs/specs/$1/spec-status.md`:
   ...
   ```
 
-  The `Latest review:` line is initialized to `(none yet)` — `/sdd:review` updates it later.
+  Phase 1 should already be `done` — `/sdd:spec` set it. If you're seeing Phase 1 = `pending` or `in-progress` at this point, stop and tell the user to re-run `/sdd:spec $1` and explicitly approve.
 
-- **If it exists** (e.g. `/sdd:update` cycle), set every `stale` and `not-started` AC-ID to `in-progress`. Leave `pass` ACs alone. Keep the existing `Latest review:` line if present.
+  The `Latest review:` line is initialized to `(none yet)` — `/sdd:review` updates it.
+
+- **If it exists** (e.g. `/sdd:update` cycle or a partial prior build), set Phase 2 = `in-progress` (mutate the row's Status + Updated columns via Edit; don't rewrite the file). Set every `stale` and `not-started` AC-ID to `in-progress` in the per-AC table. Leave `pass` ACs alone. Keep Phase 3+ rows as `pending`. Keep the existing `Latest review:` line.
+
+**Phase 2 status update at the START of Step 6** (after this scaffold step, before the first AC iterates): mark Phase 2 = `in-progress` (already done above). On end-of-build success → mark Phase 2 = `done` with note `"<N> ACs pass"`. On cap-hit or hard failure → mark Phase 2 = `fail` or `blocked` with a one-line reason. See Step 7a for the end-of-build status update.
 
 ## Step 6 — Per-AC red-green-refactor loop
 
@@ -350,7 +379,14 @@ After the loop completes (success OR cap-hit), write artifacts.
 
 ### 7a — Final `spec-status.md`
 
-Update every AC's status to its final value (`pass` / `fail` / `blocked` / `stale`). Append a `## Test-fix loop log` section if any AC took >1 GREEN attempt (one entry per attempt with the JSON's `failed[].message` summary). Append a `## Deviations from spec` section if the implementation diverged from the spec text.
+Update every AC's status in the per-AC table to its final value (`pass` / `fail` / `blocked` / `stale`). Append a `## Test-fix loop log` section if any AC took >1 GREEN attempt (one entry per attempt with the JSON's `failed[].message` summary). Append a `## Deviations from spec` section if the implementation diverged from the spec text.
+
+**Update Phase 2 row in `## Phase progress`:**
+
+- All ACs `pass` → set Phase 2 row to `done`, Updated = today, Notes = `"<N>/<N> ACs pass"`.
+- Some ACs `fail` or `blocked` (cap-hit on at least one) → set Phase 2 row to `fail`, Updated = today, Notes = `"<P>/<N> ACs pass; <F> fail, <B> blocked"`. The downstream phases (3-6) stay `pending`; the user must re-run `/sdd:build` after fixing the issues.
+
+Use Edit with the row's `2. build |` anchor to keep the update targeted.
 
 ### 7b — Project-wide `docs/codebase-map.md`
 
@@ -420,6 +456,30 @@ Implementation complete for `$1`. <N> ACs pass.
 
 Next: /sdd:review $1
 ```
+
+## Red Flags — STOP and reset
+
+If you catch yourself thinking any of these, STOP and re-read the relevant Step:
+
+| Thought | Reality |
+|---|---|
+| "I'll write the impl quickly first, then the test" | You're skipping RED. Delete the impl, start with the test. The Iron Law isn't negotiable. |
+| "The test passed immediately — great, move on" | A test that passes against zero implementation is too permissive. Tighten it (narrower substring, more specific exception, exact status code) and re-run RED. Never proceed to GREEN against a passing RED. |
+| "AC-1.2 failed 3 times; I'll weaken the test to make it pass" | The test is the contract from the spec. Weakening it breaks the contract. Surface the failure, mark AC `fail`, use the rollback prompt. |
+| "I'll skip the regression check — the AC tests are isolated" | They're not. Implementations share files and modules. The full-suite regression check is the only thing that catches "fixed AC-2.1 but broke AC-1.1." |
+| "test-runner is slow; I'll trust my read of the output" | You can't trust eyeballed pass/fail at this scale. The JSON contract is the contract. Always dispatch. |
+| "This AC is trivial — no need for a test" | Trivial code breaks. The test takes 30 seconds. Write it. |
+| "I'll refactor while I'm in there" | Drive-by refactor outside the AC's scope is forbidden. Note it for a future spec. |
+
+## Common Rationalizations
+
+| Excuse | Reality |
+|---|---|
+| "TDD slows me down" | Per-AC RGR finds bugs before commit. Faster than debugging-in-production. |
+| "I already manually verified it works" | Manual verification isn't repeatable. Tests are. |
+| "The spec is unclear, I'll just code something" | If the spec is unclear, stop. Tell the user to `/sdd:update` the AC. Don't guess. |
+| "Cap=3 is too restrictive" | Cap=3 is your error budget. Spending more than 3 attempts means the design is wrong, not the implementation. Stop. |
+| "I'll deal with the regression later" | "Later" = a broken main once `/sdd:ship` runs. Revert this AC's diff now. |
 
 ## Guardrails
 

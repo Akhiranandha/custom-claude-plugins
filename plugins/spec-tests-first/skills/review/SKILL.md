@@ -7,7 +7,15 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Agent
 
 # /sdd:review — Phase 3: Code-Quality + Security Review
 
+**Announce at start:** Say to the user: "I'm using /sdd:review to dispatch `code-quality-reviewer` and `security-reviewer` in parallel against `$1`'s changed files, then aggregating via `code-reporter` into a timestamped report. Read-only — no source edits." Then proceed.
+
 You are running Phase 3 of the SDD cycle for feature **$1**. Inputs: the feature's source code on the `feature/$1` branch + `docs/specs/$1/spec.md` + `docs/specs/$1/spec-status.md`. Output: `./reports/code-review_$1_<YYYY-MM-DD_HHMMSS>.md`.
+
+## Iron Law
+
+> **Reviewers run in parallel (single message, two Agent calls). Reviewing serially is a contract violation — the agents don't share state, and parallel halves the wall time.**
+
+The reviewer agents are read-only by tool grant; the only mutating operations this skill performs are (a) the reporter writes the report file, and (b) this skill's targeted Edit of the `Latest review:` line and Phase 3 row in `spec-status.md`. No source files are touched here.
 
 ## Pre-checks
 
@@ -114,9 +122,13 @@ The reporter writes the file and returns the absolute path + a 2–3 sentence su
 
 If the reporter returns an error (couldn't write `./reports/`, both inputs empty, etc.), surface the error to the user and stop — do not invent a substitute path.
 
-## Step 4 — Update spec-status.md `Latest review:` pointer
+## Step 4 — Update spec-status.md (Latest review + Phase progress)
 
-The `Latest review:` field lives in the top-of-file metadata block of `docs/specs/$1/spec-status.md`, between the title and the AC table:
+Two targeted edits to `docs/specs/$1/spec-status.md`, both via the Edit tool — never rewrite the file.
+
+### 4a — `Latest review:` pointer
+
+The `Latest review:` field lives in the top-of-file metadata block, between the title and the `## Phase progress` table:
 
 ```markdown
 # spec-status: <feature>
@@ -124,16 +136,18 @@ The `Latest review:` field lives in the top-of-file metadata block of `docs/spec
 Last updated: <YYYY-MM-DD>
 Latest review: <absolute path to most recent report>
 
-## Status per Acceptance Criterion
+## Phase progress
 ...
 ```
 
-Use the Edit tool:
-
 - If the file already has a `Latest review:` line → replace its value with the new report path.
-- If the file does NOT have one → insert one immediately after the `Last updated:` line. Do not touch any other line.
+- If the file does NOT have one → insert it immediately after the `Last updated:` line.
 
-Single targeted edit. Do not rewrite the whole file.
+### 4b — Phase 3 row in `## Phase progress`
+
+Mark Phase 3 (review) = `done`, Updated = today, Notes = `"<C> critical, <H> high, <M> medium, <L> low"` (counts from the reporter's summary).
+
+If the file does NOT have a `## Phase progress` table (older v1 spec being touched by v2 for the first time), insert the full 6-row table between `Latest review:` and `## Status per Acceptance Criterion`. Phase 1 = `done` (assume the spec exists), Phase 2 = `done` (assume the build pre-check passed), Phase 3 = `done` (this review just succeeded), Phases 4–6 = `pending`.
 
 ## Step 5 — Brief summary + next-step pointer
 
@@ -171,6 +185,16 @@ Do NOT print the report contents back. The user opens the file. Do NOT propose a
 | One reviewer's output empty or missing | Reporter embeds a `> Note: No <quality/security>-reviewer output was supplied.` and continues. `/sdd:review` echoes the partial report. |
 | Multi-service feature | Scope still comes from `git diff --name-only main...HEAD` — cross-service. Reviewers handle multi-language naturally. |
 | Files extremely large (>10k lines) | Reviewers handle internally; no special case here. |
+
+## Red Flags — STOP and reset
+
+| Thought | Reality |
+|---|---|
+| "I'll dispatch them serially — they don't share state anyway" | Parallel dispatch is part of the contract. Serial means 2× wall time for no gain. Use a single message with two Agent calls. |
+| "I'll add a `Verdict: BLOCK/CAUTION/GO` to the summary" | This phase has no verdict. Gating lives in `/sdd:fix` (Critical) and `/sdd:ship` (no outstanding Critical). Don't invent gates. |
+| "I'll write the report file myself instead of dispatching the reporter" | The reporter has its own format, finding-id rules, and Status-column initialization. Bypassing it breaks `/sdd:fix`. Always dispatch. |
+| "Tests are failing but I'll review anyway" | The pre-check (test-runner pre-flight) exists to prevent reviewing broken code. If it returns non-empty `failed`/`errored`, abort. |
+| "I'll print the full report back to the user" | The report stays on disk. Echo only the path + finding counts. Users open the file in their editor. |
 
 ## Rules
 

@@ -7,7 +7,15 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion, Agent, Skil
 
 # /sdd:fix — Phase 4: Walk Findings, Fix or Defer
 
+**Announce at start:** Say to the user: "I'm using /sdd:fix to walk findings from the latest review one-by-one, with revert-on-regression and atomic commits per successful fix. Critical findings must be addressed before /sdd:validate." Then proceed.
+
 You are running Phase 4 of the SDD cycle for feature **$1**. Inputs: the latest review report + feature source on `feature/$1`. Outputs: applied edits + atomic commits per successful fix + mutated report file (per-finding `Status:` updated, `## Fix log` appended).
+
+## Iron Law
+
+> **After every edit, the test-runner runs against the full feature suite. If any previously-pass AC now fails, the edit is reverted (single `git checkout`), the finding is marked `deferred`, and we move on. Never commit a fix that breaks an AC.**
+
+The whole reason we walk findings one-by-one (rather than batch-applying) is so this revert is atomic — one finding, one diff, one rollback. The user sees the regression message and decides; we never silently accept.
 
 ## Pre-checks
 
@@ -221,7 +229,13 @@ Use ISO-8601-ish timestamps (`date +"%Y-%m-%d %H:%M:%S"` or equivalent — Pytho
 
 Re-runs of `/sdd:fix` add more rows, never rewrite history.
 
-## Step 6 — Critical gate
+## Step 6 — Critical gate + Phase 4 status update
+
+### 6a — Mark Phase 4 = `in-progress` when the walk starts
+
+At the very beginning of Step 3 (before the first finding is shown), Edit `docs/specs/$1/spec-status.md`'s Phase 4 row: Status = `in-progress`, Updated = today, Notes = `"walking <N> findings"`.
+
+### 6b — Critical gate
 
 After the queue is exhausted (or user quit), evaluate:
 
@@ -264,6 +278,12 @@ On (a):
 On (b): output the next-step pointer.
 On (c): stop, leaving state preserved.
 
+### 7a — Mark Phase 4 = `done` on success
+
+Before printing the next-step pointer, Edit `spec-status.md`'s Phase 4 row: Status = `done`, Updated = today, Notes = `"<fixed> fixed, <skipped> skipped, <deferred> deferred (0 critical outstanding)"`.
+
+If the user quit early with Critical findings still unresolved (Step 6 gate failed and they chose "stop here"), leave Phase 4 = `in-progress` with Notes = `"<N> critical unresolved — paused"`. Don't promote to `done` — the gate isn't satisfied.
+
 ### Next-step pointer on success
 
 ```
@@ -289,6 +309,26 @@ Next: /sdd:validate $1
 ## Resumability
 
 The report file is the single source of truth and is mutated in place. Calling `/sdd:fix $1` a second time picks up exactly where it left off — no state lives in memory between sessions. The `## Fix log` provides the audit trail across multiple sessions.
+
+## Red Flags — STOP and reset
+
+| Thought | Reality |
+|---|---|
+| "This fix is small, surely it won't regress" | Run test-runner anyway. The cost is 30 seconds; the cost of a silent regression is much higher. |
+| "I'll batch a few similar fixes, then test once" | One edit at a time. Batching destroys revert atomicity — if any AC fails, you can't tell which fix broke it. |
+| "The user said skip — I'll just mark it fixed" | `Skip` = "don't edit, mark as `skipped`". For Critical findings, `Skip` requires a one-line justification recorded in the report. No silent skips. |
+| "Critical gate is annoying — let me proceed to validate" | The Critical gate is the whole reason this phase exists. Override needs explicit user reason; no auto-bypass. |
+| "Re-running /sdd:review at the end is wasteful" | It's recommended for a reason — fixes can introduce new findings (extracted helper that's now dead, magic-number-replaced constant with a typo). The 30-60s cost is worth it. |
+| "The fix touches multiple files — I'll commit the AC test edit separately" | Tests aren't part of the fix. If a fix needs to touch tests, the test is asserting on implementation details (not behavior) — flag it and ask the user. |
+
+## Common Rationalizations
+
+| Excuse | Reality |
+|---|---|
+| "Atomic commits clutter history" | Atomic commits make revert cheap and audit clean. The clutter argument loses against the safety win. |
+| "I'll defer all Lows to save time" | Defer is fine — but it's a user choice, not yours. Show the finding and let them pick. |
+| "Custom fixes are slower than just applying the suggestion" | Sometimes the suggestion is wrong for the project's idioms. The user knows their code; trust their `(c) Custom` choice. |
+| "The report says `Status: pending` but I already fixed it elsewhere" | Use `(s) Skip` with justification = "already fixed in <commit/diff>". Don't silently flip `Status:` without a Fix log row. |
 
 ## Rules
 

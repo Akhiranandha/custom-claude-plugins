@@ -7,7 +7,15 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion
 
 # /sdd:spec — Phase 1: Write the Spec
 
-You are running Phase 1 of the SDD cycle for feature **$1**. Output: `docs/specs/$1/spec.md`.
+**Announce at start:** Say to the user: "I'm using /sdd:spec to author `$1` interactively (8-section template, monorepo + scope check + explicit user approval at the end)." Then proceed.
+
+You are running Phase 1 of the SDD cycle for feature **$1**. Output: `docs/specs/$1/spec.md` + a `## Phase progress` block in `docs/specs/$1/spec-status.md` with Phase 1 marked `done` only after the user explicitly approves.
+
+## Iron Law
+
+> **Don't mark Phase 1 = `done` until the user picks `(a) Approve` at the Step 4 gate. A spec the user hasn't read is a spec waiting to fail in `/sdd:build`.**
+
+`/sdd:build`'s pre-check 1 enforces this — it won't run against a spec whose Phase 1 status isn't `done`. So skipping the gate here just produces a confusing "spec exists but build refuses to start" error downstream.
 
 ## Pre-check
 
@@ -17,17 +25,9 @@ If `docs/specs/$1/spec.md` already exists, ask the user via AskUserQuestion:
 
 Stop unless they choose (a).
 
-## Multi-feature handling — the hard rule
+## One-feature-per-spec — the hard rule
 
-**Sub-capabilities of one feature go in ONE spec as separate Acceptance Criteria — not multiple specs.**
-
-If the user describes `add` / `list` / `summary` for a money tracker, that is **one** spec with multiple `AC-IDs` (e.g. `AC-1.1` for add, `AC-2.1` for list, `AC-3.1` for summary). It is NOT three specs.
-
-Only ask "single spec or multiple?" if the user describes capabilities that don't share a domain model and could ship independently (e.g. a calendar app and a money tracker — those are two features). When in doubt, default to one spec — over-splitting is harder to recover from than under-splitting.
-
-If — and only if — the user is describing multiple genuinely separate features, ask:
-
-> You've described what sound like multiple features. Should I write **(a, recommended)** one spec per feature in its own `docs/specs/<feature>/` folder, implemented sequentially, or **(b)** one combined spec covering all of them?
+**Sub-capabilities of one feature go in ONE spec as separate Acceptance Criteria — not multiple specs.** Multiple genuinely independent features go in **separate specs**, implemented sequentially. The full split-vs-combine decision logic lives in Step 1.5 below — invoke it whenever the user's request spans capabilities that could ship independently.
 
 ## Step 0 — Monorepo detection (on first `/sdd:spec` only)
 
@@ -72,6 +72,61 @@ Quick context gather, in this order. Stop when you have enough:
 1. **The user's prompt** — stack mentioned? domain hints? out-of-scope hints? Use them.
 2. **`CLAUDE.md`** at the project root, if it exists — pick up stack / conventions.
 3. **Existing specs** at `docs/specs/*/spec.md` — match their tone, but don't infer technical conventions from their content (those come from CLAUDE.md or the user).
+
+## Step 1.5 — Scope check (catch oversized specs BEFORE writing)
+
+Before going further, evaluate whether the user's request is one feature or several. Prevention is much cheaper than splitting an already-written spec after `/sdd:build` and `/sdd:review` have run against it.
+
+### Heuristic — what counts as "should split"?
+
+A request is **one feature** (one spec, multiple AC clusters) when its capabilities:
+- Share a domain model (same primary entity — e.g. "user signup" + "user profile editing" both touch the `users` table).
+- Need to ship together to be useful (e.g. "API endpoint" + "client form that calls it").
+- Belong to the same user goal expressed in the prompt.
+
+A request is **multiple features** (separate specs, ideally sequential) when:
+- The capabilities have **no shared domain model** (e.g. "auth flow" + "billing dashboard" — different entities, different tables, different teams could ship them).
+- Either could ship **without the other** and still be useful.
+- The user listed them as bullets / "and also" / "plus" — surface signal that they're parallel asks.
+
+The 50% case (capabilities loosely related but each substantial): default to **split**. Combining is hard to undo; splitting later is harder. Spec files should stay focused — under ~200 lines with ≤8 AC clusters is a healthy ceiling.
+
+### Detection + prompt
+
+If the request looks like multiple features, AskUserQuestion before going to Step 2:
+
+> Looking at what you described, this might be **N independent features**:
+>   - **`<name1>`** — `<one-line goal>` (involves <entities/files>)
+>   - **`<name2>`** — `<one-line goal>` (involves <entities/files>)
+>
+> They could ship independently — `<name1>` doesn't need `<name2>` to work, and vice versa.
+>
+> Choose:
+> - **(a, recommended)** Write one spec per feature, sequentially. I'll start with `<name1>` (or you pick) and you can `/sdd:spec <name2>` after.
+> - **(b)** Combine into one spec with the capabilities as separate AC clusters (`AC-1.*`, `AC-2.*`, ...). Better only if they share enough domain model.
+> - **(c)** Let me clarify — they're actually coupled because <reason>. I'll describe the relationship and you'll decide.
+
+### Outcomes
+
+On **(a) Split**:
+- AskUserQuestion which one to spec first (default: the one with the simplest interface, or the user's first mention if order was clear).
+- Create a `## Related features` reference in this spec's Section 5 (Technical details) listing the other feature names and a one-line goal each. This is a forward-reference — `/sdd:spec <other-name>` later can do the inverse.
+- Continue with Step 2 below for the chosen first feature only.
+
+On **(b) Combine**:
+- Continue with Step 2 below treating the request as one feature with multiple AC clusters.
+- Warn the user: if the combined spec grows past ~200 lines, you'll suggest splitting again at the user-approval gate (Step 4).
+
+On **(c) Clarify**:
+- Capture the user's relationship description, decide one vs. multiple based on it, proceed accordingly.
+
+### When to skip Step 1.5 entirely
+
+- The user's prompt is a single clear capability (e.g. "add a /healthcheck endpoint"). No prompt needed.
+- The user is invoking `/sdd:update` (this skill runs the same template but the multi-feature decision was already made when the original spec was written).
+- The user explicitly said "one spec for all of this" in their initial message.
+
+When in doubt, ask. The 30 seconds for an AskUserQuestion is much cheaper than the 30 minutes of re-iterating an oversized spec.
 
 ## Step 2 — Ask, don't guess
 
@@ -182,7 +237,7 @@ Concrete steps to manually verify the feature works end-to-end. Each step MUST h
 - **VS-2** *(manual)*: <step a human performs> — <what they should see>
 ```
 
-## Step 4 — Confirm and checkpoint
+## Step 4 — Confirm + explicit user-approval gate
 
 Print one short confirmation listing:
 
@@ -190,12 +245,77 @@ Print one short confirmation listing:
 - The list of AC-IDs and VS-IDs you assigned.
 - Any open questions still unresolved.
 
-Then output the checkpoint message exactly:
+Then AskUserQuestion to gate the cycle:
 
-> Spec written to `docs/specs/$1/spec.md`. Review it and tell me any changes you want.
-> When you're happy, run `/sdd:build $1` — it will detect the test framework + layout profile, scaffold tests, and iterate ACs via per-AC red-green-refactor.
+> Spec written to `docs/specs/$1/spec.md`. Please review it now and decide:
+> - **(a) Approve** — the spec captures what you want; `/sdd:build` can begin per-AC RGR
+> - **(b) Edit** — I'll revise sections; tell me what to change
+> - **(c) Cancel** — leave the file as a draft; don't mark the spec phase done
 
-DO NOT proceed to building in this skill — the user must explicitly trigger the next phase.
+On **(a) Approve**:
+
+1. Initialize or update `docs/specs/$1/spec-status.md` with a `## Phase progress` block at the top, immediately after the `Latest review:` line (or insert both if the file doesn't exist yet). The Phase 1 row is set to `done`:
+
+   ```markdown
+   # spec-status: <feature>
+
+   Last updated: <YYYY-MM-DD>
+   Latest review: (none yet)
+
+   ## Phase progress
+
+   | Phase           | Status      | Updated      | Notes                |
+   |-----------------|-------------|--------------|----------------------|
+   | 1. spec         | done        | <YYYY-MM-DD> | approved by user     |
+   | 2. build        | pending     | —            | —                    |
+   | 3. review       | pending     | —            | —                    |
+   | 4. fix          | pending     | —            | —                    |
+   | 5. validate     | pending     | —            | —                    |
+   | 6. ship         | pending     | —            | —                    |
+
+   ## Status per Acceptance Criterion
+
+   | AC-ID | Status | Notes |
+   |---|---|---|
+   <one row per AC-ID, all status = not-started>
+   ```
+
+   If `spec-status.md` already exists from a prior cycle (`/sdd:update`), Edit the file:
+   - Mark Phase 1 row Status = `done`, Updated = today, Notes = `"approved by user (re-approved <YYYY-MM-DD>)"`.
+   - For added/modified ACs from this update, set their per-AC row to `not-started` / `stale` (already done by `/sdd:update`).
+
+2. Output the next-step pointer:
+
+   ```
+   Spec approved for `$1`.
+   Next: /sdd:build $1
+     /sdd:build will detect the test framework + layout profile, scaffold tests,
+     and iterate each AC via per-AC red-green-refactor (one failing test → minimal
+     impl → green verified → next AC).
+   ```
+
+On **(b) Edit**: capture the user's requested changes inline, apply them with Edit, then loop back to Step 4 (re-confirm + re-prompt). Do NOT mark Phase 1 = `done` until the user picks Approve.
+
+On **(c) Cancel**: leave `spec.md` on disk but DO NOT create or update `spec-status.md`. Output:
+
+```
+Spec draft saved to `docs/specs/$1/spec.md` but not approved.
+Re-run /sdd:spec $1 when ready to approve and proceed.
+```
+
+Stop. `/sdd:build` will refuse to run on an unapproved spec — see `/sdd:build`'s pre-check 0.
+
+DO NOT proceed to building in this skill — the user must explicitly trigger `/sdd:build`.
+
+## Red Flags — STOP and reset
+
+| Thought | Reality |
+|---|---|
+| "I'll skip Step 1.5 (scope check) for small-looking requests" | Small-looking requests with "and also" become oversized specs. The 30 seconds for an AskUserQuestion is much cheaper than re-iterating later. |
+| "I'll auto-approve at Step 4 since the spec looks fine" | The user has to approve. The Phase 1 gate is for the human, not for you. Always present `(a)/(b)/(c)` and wait. |
+| "I'll write `/sdd:tests $1` as the next step" | `/sdd:tests` is deprecated. Always point at `/sdd:build $1`. |
+| "Error path AC without a discriminating signal is fine, the test phase will figure it out" | `/sdd:build`'s RED step refuses to write a too-permissive test. Spec the signal now, or fix it after the AC fails RED. |
+| "The user gave vague requirements — I'll fill in details" | Ask. Step 2 exists for exactly this. Don't invent the spec; capture what the user actually wants. |
 
 ## Rules
 

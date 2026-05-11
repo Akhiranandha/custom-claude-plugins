@@ -7,7 +7,13 @@ allowed-tools: Read
 
 # /sdd:tests — DEPRECATED (folded into /sdd:build)
 
+**Announce at start:** Say to the user: "/sdd:tests is deprecated in STF v2. I'll print the redirect and stop — no files will be touched." Then proceed.
+
 This skill is a deprecation shim. In STF v2 the dedicated tests phase no longer exists — test scaffolding and per-AC test writing are now both handled by `/sdd:build` via the per-AC red-green-refactor loop.
+
+## Iron Law
+
+> **This skill writes nothing. Prints the redirect message and stops. Never falls back to "old behavior" — there is no fallback.**
 
 Output to the user:
 

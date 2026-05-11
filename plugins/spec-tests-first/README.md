@@ -20,7 +20,14 @@ A Claude Code plugin that runs a Spec-Driven Development cycle as **six self-con
 
 `/sdd:status` is a slash command, not a skill — it never writes files, never invokes other phases, never proposes next actions. Use it to check progress at any point without disturbing the cycle. With no argument it scans every `docs/specs/*/spec-status.md` and prints one row per spec; with a feature name it drills into that spec and prints one row per AC-ID plus a Latest-review summary block.
 
-## What changed in v2
+## What changed in v2.1 (over v2)
+
+- **Per-phase status tracking.** `spec-status.md` now has a `## Phase progress` table at the top — every phase skill updates its own row (`pending` → `in-progress` → `done` / `fail` / `blocked`). `/sdd:status` aggregate view shows current phase per spec at a glance.
+- **Explicit user-approval gate after `/sdd:spec`.** The spec phase ends with an AskUserQuestion — Approve / Edit / Cancel. Only on Approve does Phase 1 = `done`, and `/sdd:build` refuses to run against an unapproved spec.
+- **Scope check in `/sdd:spec` (Step 1.5).** Detects oversized requests (multiple independent features mashed into one) and prompts to split into separate sequential specs vs. combine. Prevention beats post-build refactor.
+- **Superpowers-style flow on every skill.** Announce-at-start lines, Iron Law callouts near the top, Red Flags + Common Rationalizations tables for the high-temptation skills (`/sdd:build`, `/sdd:fix`).
+
+## What changed in v2 (over v1)
 
 | v1 | v2 |
 |---|---|
