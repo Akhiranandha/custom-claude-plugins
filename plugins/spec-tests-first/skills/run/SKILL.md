@@ -48,6 +48,7 @@ Detect existing artifacts and offer to skip already-completed phases:
 
 | Artifact | Phase already done | Default action |
 |---|---|---|
+| `CLAUDE.md ## Test commands` exists AND `docs/codebase-map.md` exists | Init | Skip Phase 0 prompt — project already initialized |
 | `docs/specs/$1/spec.md` | Spec | Offer to skip |
 | `docs/specs/$1/spec-status.md` shows all ACs `pass` | Build | Offer to skip |
 | `./reports/code-review_$1_*.md` exists AND `spec-status.md` `Latest review:` matches | Review | Offer to skip (re-run optional) |
