@@ -1,13 +1,13 @@
 ---
 name: validate
-description: Phase 4 of the SDD cycle. Use when the user invokes /sdd:validate <feature> to walk through the spec's "Validation steps" section after implementation. Categorizes steps as automated (executes them) or manual (presents as a checklist), aggregates pass/fail, and either unblocks the ship phase or loops back to build with failure notes appended to spec-status.md.
+description: Phase 5 of the SDD cycle. Use when the user invokes /sdd:validate <feature> to walk through the spec's "Validation steps" section after implementation. Categorizes steps as automated (executes them) or manual (presents as a checklist), aggregates pass/fail, and either unblocks the ship phase or loops back to build with failure notes appended to spec-status.md.
 argument-hint: <feature-name>
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion
 ---
 
 # /sdd:validate — Phase 4: Validate Against the Spec
 
-You are running Phase 4 of the SDD cycle for feature **$1**.
+You are running Phase 5 of the SDD cycle for feature **$1**.
 
 This phase is the **acceptance gate**. Tests passing means the code is *correct*; validation passing means the *feature works*. They are not the same.
 
